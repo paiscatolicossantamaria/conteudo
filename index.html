@@ -139,6 +139,7 @@
         <div class="fotos" id="pFotosAtuais"></div>
         <div class="check"><input type="checkbox" id="pAutorizado">
           <label for="pAutorizado" style="margin:0;font-weight:500;color:var(--texto)">Confirmo que todas as pessoas que aparecem nas fotos (e os responsáveis pelas crianças) autorizaram a publicação.</label></div>
+        <p class="meta">Ao aprovar, foto e carrossel vão direto para o Instagram. Reel e story ficam para postar pelo celular.</p>
         <div class="linha" style="margin-top:4px">
           <div><label for="pStatus">Situação</label>
             <select id="pStatus"><option value="ideia">Ideia</option><option value="em_preparo">Em preparo</option></select></div>
@@ -277,11 +278,14 @@ async function desenharPosts(){
       ${p.legenda?`<div class="legenda">${esc(p.legenda)}</div>`:''}
       <div class="fotos" data-fotos="${p.id}"></div>
       ${temFoto && !p.imagens_autorizadas ? '<div class="aviso">Falta confirmar a autorização de imagem das pessoas nas fotos.</div>':''}
+      ${p.ig_status==='publicando' ? '<div class="meta"><b>Publicando no Instagram...</b></div>':''}
+      ${p.ig_status==='erro' ? `<div class="aviso">O Instagram não aceitou: ${esc(p.ig_erro)}</div>`:''}
       <div class="acoes">
         ${p.legenda?`<button class="btn claro" onclick="copiarLegenda('${p.id}')">Copiar legenda</button>`:''}
         ${pend?`<button class="btn claro" onclick="editarPost('${p.id}')">Editar</button>`:''}
         ${pend?`<button class="btn verde" onclick="abrirAprovacao('${p.id}')">Aprovar</button>`:''}
-        ${p.status==='aprovado'?`<button class="btn" onclick="marcarPublicado('${p.id}')">Marcar como publicado</button>`:''}
+        ${p.status==='aprovado' && (!p.ig_status || p.ig_status==='erro') && ['foto','carrossel'].includes(p.tipo)?`<button class="btn verde" onclick="publicarNoInstagram('${p.id}')">Publicar no Instagram</button>`:''}
+        ${p.status==='aprovado' && p.ig_status!=='publicando'?`<button class="btn claro" onclick="marcarPublicado('${p.id}')">Já postei pelo celular</button>`:''}
         <button class="btn claro" onclick="whatsPost('${p.id}')">Mandar no WhatsApp</button>
       </div></div>`;
   }).join('');
@@ -325,9 +329,10 @@ async function salvarPost(){
     const atual = id ? posts.find(x=>x.id===id) : null;
     const fotos = [...(atual?.fotos||[])];
     for(const f of $('pFotos').files){
-      const ext = (f.name.split('.').pop()||'jpg').toLowerCase();
-      const caminho = `${new Date().toISOString().slice(0,10)}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await sb.storage.from('fotos').upload(caminho, f, { contentType: f.type });
+      let blob;
+      try { blob = await prepararFoto(f); } catch(_) { throw new Error('Não consegui abrir a foto ' + f.name + '. Use JPG ou PNG.'); }
+      const caminho = `${new Date().toISOString().slice(0,10)}/${crypto.randomUUID()}.jpg`;
+      const { error } = await sb.storage.from('fotos').upload(caminho, blob, { contentType: 'image/jpeg' });
       if(error) throw new Error('Falha ao enviar foto: '+error.message);
       fotos.push(caminho);
     }
@@ -348,7 +353,31 @@ function fecharModal(){ $('modalAprovar').style.display='none'; aprovandoId=null
 async function confirmarAprovacao(){
   const { error } = await sb.rpc('aprovar_post', { p_id: aprovandoId, p_senha: $('aprSenha').value, p_nome: eu.nome });
   if(error){ aviso(error.message.includes('senha') ? 'Senha incorreta.' : error.message.includes('autorizacao') ? 'Falta a autorização de imagem.' : 'Não foi possível aprovar.'); return; }
-  fecharModal(); aviso('Post aprovado.'); await carregarPosts();
+  const id = aprovandoId;
+  fecharModal(); aviso('Aprovado. Publicando no Instagram...'); await carregarPosts();
+  await publicarNoInstagram(id);
+}
+async function publicarNoInstagram(id){
+  const { data, error } = await sb.functions.invoke('publicar', { body: { id } });
+  if(error || !data?.ok) aviso('Não publicou: ' + (data?.erro || data?.motivo || 'erro de conexão'));
+  else aviso('Publicado no Instagram.');
+  await carregarPosts();
+}
+// Instagram aceita JPEG entre 4:5 (em pé) e 1.91:1 (deitada). Ajusta antes de enviar.
+async function prepararFoto(arquivo){
+  const img = await createImageBitmap(arquivo);
+  let w = img.width, h = img.height;
+  const r = w / h;
+  let cw = w, ch = h;
+  if(r < 0.8) cw = Math.round(h * 0.8);          // muito em pé: completa as laterais
+  else if(r > 1.91) ch = Math.round(w / 1.91);   // muito deitada: completa em cima/embaixo
+  const escala = Math.min(1, 1440 / Math.max(cw, ch));
+  const c = document.createElement('canvas');
+  c.width = Math.round(cw * escala); c.height = Math.round(ch * escala);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, Math.round((cw - w) / 2 * escala), Math.round((ch - h) / 2 * escala), Math.round(w * escala), Math.round(h * escala));
+  return await new Promise(res => c.toBlob(res, 'image/jpeg', 0.9));
 }
 async function marcarPublicado(id){
   if(!confirm('Confirma que este post já está no Instagram?')) return;

@@ -139,7 +139,7 @@
         <div class="fotos" id="pFotosAtuais"></div>
         <div class="check"><input type="checkbox" id="pAutorizado">
           <label for="pAutorizado" style="margin:0;font-weight:500;color:var(--texto)">Confirmo que todas as pessoas que aparecem nas fotos (e os responsáveis pelas crianças) autorizaram a publicação.</label></div>
-        <p class="meta">Ao aprovar, foto e carrossel vão direto para o Instagram. Reel e story ficam para postar pelo celular.</p>
+        <p class="meta">Ao aprovar, foto, carrossel e story vão direto para o Instagram. Story usa só uma foto e não mostra a legenda. Reel fica para postar pelo celular.</p>
         <div class="linha" style="margin-top:4px">
           <div><label for="pStatus">Situação</label>
             <select id="pStatus"><option value="ideia">Ideia</option><option value="em_preparo">Em preparo</option></select></div>
@@ -279,12 +279,13 @@ async function desenharPosts(){
       <div class="fotos" data-fotos="${p.id}"></div>
       ${temFoto && !p.imagens_autorizadas ? '<div class="aviso">Falta confirmar a autorização de imagem das pessoas nas fotos.</div>':''}
       ${p.ig_status==='publicando' ? '<div class="meta"><b>Publicando no Instagram...</b></div>':''}
-      ${p.ig_status==='erro' ? `<div class="aviso">O Instagram não aceitou: ${esc(p.ig_erro)}</div>`:''}
+      ${p.ig_status==='erro' ? `<div class="aviso">O Instagram não aceitou: ${esc(p.ig_erro)}${(p.ig_tentativas||0)<3?' (o sistema tenta de novo sozinho em alguns minutos)':''}</div>`:''}
+      ${p.status==='aprovado' && !p.ig_status && p.tipo!=='reel' ? '<div class="meta">Na fila para o Instagram (sai em até 5 minutos).</div>':''}
       <div class="acoes">
         ${p.legenda?`<button class="btn claro" onclick="copiarLegenda('${p.id}')">Copiar legenda</button>`:''}
         ${pend?`<button class="btn claro" onclick="editarPost('${p.id}')">Editar</button>`:''}
         ${pend?`<button class="btn verde" onclick="abrirAprovacao('${p.id}')">Aprovar</button>`:''}
-        ${p.status==='aprovado' && (!p.ig_status || p.ig_status==='erro') && ['foto','carrossel'].includes(p.tipo)?`<button class="btn verde" onclick="publicarNoInstagram('${p.id}')">Publicar no Instagram</button>`:''}
+        ${p.status==='aprovado' && (!p.ig_status || p.ig_status==='erro') && ['foto','carrossel','story'].includes(p.tipo)?`<button class="btn verde" onclick="publicarNoInstagram('${p.id}')">Publicar no Instagram</button>`:''}
         ${p.status==='aprovado' && p.ig_status!=='publicando'?`<button class="btn claro" onclick="marcarPublicado('${p.id}')">Já postei pelo celular</button>`:''}
         <button class="btn claro" onclick="whatsPost('${p.id}')">Mandar no WhatsApp</button>
       </div></div>`;

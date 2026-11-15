@@ -194,6 +194,7 @@
     <p class="meta" id="aprTitulo"></p>
     <label for="aprSenha">Senha de aprovação</label>
     <input id="aprSenha" type="password" autocomplete="off">
+    <p id="aprLembrete" style="font-size:.85rem;opacity:.75;margin:.4rem 0 0"></p>
     <div class="acoes"><button class="btn verde" onclick="confirmarAprovacao()">Aprovar</button><button class="btn claro" onclick="fecharModal()">Cancelar</button></div>
   </div>
 </div>
@@ -225,7 +226,7 @@ async function entrar(){
   $('btnLogin').disabled = false;
   $('loginMsg').textContent = error ? ('Não foi possível enviar: ' + error.message) : 'Pronto. Abra seu email e toque no link "Log In" para entrar.';
 }
-async function sair(){ await sb.auth.signOut(); eu=null; mostrar('telaLogin'); $('quem').classList.add('oculto'); }
+async function sair(){ esquecerSenha(); await sb.auth.signOut(); eu=null; mostrar('telaLogin'); $('quem').classList.add('oculto'); }
 
 async function iniciar(session){
   if(!session){ mostrar('telaLogin'); return; }
@@ -262,6 +263,7 @@ async function urlFoto(caminho){
   const { data } = await sb.storage.from('fotos').createSignedUrl(caminho, 3600);
   return data?.signedUrl || '';
 }
+let desenhoVez = 0;
 async function desenharPosts(){
   const lista = posts.filter(p => filtro==='todos' ? true : filtro==='fila' ? ['ideia','em_preparo'].includes(p.status) : p.status===filtro);
   const box = $('listaPosts');
@@ -290,12 +292,14 @@ async function desenharPosts(){
         <button class="btn claro" onclick="whatsPost('${p.id}')">Mandar no WhatsApp</button>
       </div></div>`;
   }).join('');
+  const vez = ++desenhoVez; // se a lista for redesenhada no meio, este desenho para (evita miniatura repetida)
   for(const p of lista){
     if(!(p.fotos||[]).length) continue;
     const el = box.querySelector(`[data-fotos="${p.id}"]`);
     for(const c of p.fotos){
       const u = await urlFoto(c);
-      if(u) el.insertAdjacentHTML('beforeend', `<a href="${u}" target="_blank" download><img src="${u}" alt="foto do post"></a>`);
+      if(vez !== desenhoVez) return;
+      if(u && el) el.insertAdjacentHTML('beforeend', `<a href="${u}" target="_blank" download><img src="${u}" alt="foto do post"></a>`);
     }
   }
 }
@@ -348,13 +352,23 @@ async function salvarPost(){
 function abrirAprovacao(id){
   const p = posts.find(x=>x.id===id);
   if((p.fotos||[]).length && !p.imagens_autorizadas){ aviso('Antes de aprovar, confirme a autorização de imagem (botão Editar).'); return; }
-  aprovandoId=id; $('aprTitulo').textContent=p.titulo; $('aprSenha').value=''; $('modalAprovar').style.display='flex'; $('aprSenha').focus();
+  aprovandoId=id; $('aprTitulo').textContent=p.titulo;
+  const lemb = senhaLembrada();
+  $('aprSenha').value = lemb || '';
+  $('aprLembrete').textContent = lemb ? `Senha já digitada. Vale por mais ${Math.ceil((LEMBRA.ate-Date.now())/60000)} min. É só confirmar.` : 'Depois de digitar, a senha vale por 15 minutos neste aparelho.';
+  $('modalAprovar').style.display='flex'; $('aprSenha').focus();
 }
+// senha de aprovação lembrada por 15 minutos (só neste aparelho, some ao sair)
+const LEMBRA = { v:null, ate:0 };
+try{ const g=JSON.parse(sessionStorage.getItem('aprLembra')||'null'); if(g&&g.ate>Date.now()){ LEMBRA.v=g.v; LEMBRA.ate=g.ate; } }catch(e){}
+function senhaLembrada(){ return LEMBRA.ate>Date.now() ? LEMBRA.v : null; }
+function lembrarSenha(v){ LEMBRA.v=v; LEMBRA.ate=Date.now()+15*60000; try{ sessionStorage.setItem('aprLembra', JSON.stringify(LEMBRA)); }catch(e){} }
+function esquecerSenha(){ LEMBRA.v=null; LEMBRA.ate=0; try{ sessionStorage.removeItem('aprLembra'); }catch(e){} }
 function fecharModal(){ $('modalAprovar').style.display='none'; aprovandoId=null; }
 async function confirmarAprovacao(){
   const { error } = await sb.rpc('aprovar_post', { p_id: aprovandoId, p_senha: $('aprSenha').value, p_nome: eu.nome });
-  if(error){ aviso(error.message.includes('senha') ? 'Senha incorreta.' : error.message.includes('autorizacao') ? 'Falta a autorização de imagem.' : 'Não foi possível aprovar.'); return; }
-  const id = aprovandoId;
+  if(error){ if(error.message.includes('senha')) esquecerSenha(); aviso(error.message.includes('senha') ? 'Senha incorreta.' : error.message.includes('autorizacao') ? 'Falta a autorização de imagem.' : 'Não foi possível aprovar.'); return; }
+  const id = aprovandoId; lembrarSenha($('aprSenha').value);
   fecharModal(); aviso('Aprovado. Publicando no Instagram...'); await carregarPosts();
   await publicarNoInstagram(id);
 }

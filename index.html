@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pais Católicos Santa Maria — Conteúdo</title>
+<meta name="theme-color" content="#16244a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --azul:#16244a; --azul2:#22346a; --ouro:#c9a24a; --ouro-claro:#f3ead2;
+    --fundo:#f7f5f0; --card:#ffffff; --texto:#1f2433; --suave:#6b7080; --linha:#e4e0d6;
+    --ok:#2f7a4f; --alerta:#b5562d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--fundo);color:var(--texto);font-size:15px;line-height:1.45}
+  header{background:var(--azul);color:#fff;padding:14px 18px;position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px}
+  header svg{flex:none}
+  header h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:22px;margin:0;letter-spacing:.3px}
+  header small{display:block;color:var(--ouro);font-size:12px;letter-spacing:1.5px;text-transform:uppercase}
+  header .quem{margin-left:auto;font-size:12px;text-align:right;color:#cfd6ea}
+  header .quem button{background:none;border:1px solid #4a5a8a;color:#cfd6ea;border-radius:6px;padding:3px 8px;font-size:12px;margin-top:3px;cursor:pointer}
+  nav{display:flex;background:#fff;border-bottom:1px solid var(--linha);position:sticky;top:62px;z-index:9;overflow-x:auto}
+  nav button{flex:1;min-width:90px;padding:12px 8px;border:0;background:none;font:600 14px Inter;color:var(--suave);border-bottom:3px solid transparent;cursor:pointer}
+  nav button.ativo{color:var(--azul);border-bottom-color:var(--ouro)}
+  main{max-width:820px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--linha);border-radius:12px;padding:16px;margin-bottom:14px}
+  h2{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--azul);margin:4px 0 12px}
+  h3{margin:0 0 4px;font-size:16px}
+  label{display:block;font-weight:600;font-size:13px;margin:12px 0 4px;color:var(--azul)}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--linha);border-radius:8px;font:inherit;background:#fff}
+  textarea{min-height:120px;resize:vertical}
+  .linha{display:flex;gap:10px;flex-wrap:wrap}.linha>*{flex:1;min-width:140px}
+  .check{display:flex;gap:10px;align-items:flex-start;margin-top:14px;background:var(--ouro-claro);padding:10px 12px;border-radius:8px;font-size:13px}
+  .check input{width:auto;margin-top:3px}
+  .btn{display:inline-block;padding:10px 16px;border-radius:8px;border:0;font:600 14px Inter;cursor:pointer;background:var(--azul);color:#fff}
+  .btn.ouro{background:var(--ouro);color:var(--azul)}
+  .btn.claro{background:#fff;color:var(--azul);border:1px solid var(--linha)}
+  .btn.verde{background:var(--ok)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .filtros{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .filtros button{border:1px solid var(--linha);background:#fff;border-radius:20px;padding:6px 12px;font:500 13px Inter;cursor:pointer;color:var(--suave)}
+  .filtros button.ativo{background:var(--azul);color:#fff;border-color:var(--azul)}
+  .selo{display:inline-block;font-size:11px;font-weight:600;padding:3px 8px;border-radius:12px;text-transform:uppercase;letter-spacing:.5px}
+  .s-ideia{background:#eef0f5;color:#4a5170}.s-em_preparo{background:#fdf1d8;color:#8a6412}
+  .s-aprovado{background:#dff1e6;color:#21603c}.s-publicado{background:#e2e7f5;color:var(--azul)}
+  .meta{color:var(--suave);font-size:13px;margin-top:4px}
+  .legenda{white-space:pre-wrap;background:#faf9f6;border-left:3px solid var(--ouro);padding:10px 12px;margin-top:10px;border-radius:4px;font-size:14px}
+  .fotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .fotos img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--linha)}
+  .aviso{background:#fbe9e1;color:var(--alerta);padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px}
+  .vazio{text-align:center;color:var(--suave);padding:30px 10px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--azul);color:#fff;padding:10px 18px;border-radius:24px;font-size:14px;z-index:50;display:none;max-width:90%}
+  .login{max-width:420px;margin:50px auto;text-align:center}
+  .login .card{text-align:left}
+  .cal-dia{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--linha)}
+  .cal-dia:last-child{border-bottom:0}
+  .cal-data{flex:none;width:58px;text-align:center;background:var(--azul);color:#fff;border-radius:8px;padding:6px 0}
+  .cal-data b{display:block;font-family:'Cormorant Garamond',serif;font-size:24px;line-height:1}
+  .cal-data span{font-size:11px;text-transform:uppercase;color:var(--ouro)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  thead th{position:sticky;top:110px;background:#fff;text-align:left;padding:8px;border-bottom:2px solid var(--linha);color:var(--azul)}
+  td{padding:8px;border-bottom:1px solid var(--linha)}
+  .modal{position:fixed;inset:0;background:rgba(22,36,74,.55);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
+  .modal .card{max-width:400px;width:100%}
+  .oculto{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+    <circle cx="17" cy="17" r="16" fill="none" stroke="#c9a24a" stroke-width="1.5"/>
+    <path d="M17 6v22M10 13h14" stroke="#c9a24a" stroke-width="2.4" stroke-linecap="round"/>
+  </svg>
+  <div><small>Conteúdo do Instagram</small><h1>Pais Católicos Santa Maria</h1></div>
+  <div class="quem oculto" id="quem"><span id="quemNome"></span><br><button onclick="sair()">Sair</button></div>
+</header>
+
+<!-- LOGIN -->
+<section id="telaLogin" class="login oculto">
+  <h2>Entrar</h2>
+  <div class="card">
+    <p style="margin-top:0">Digite seu email. Vamos mandar um link de acesso para a sua caixa de entrada.</p>
+    <label for="loginEmail">Seu email</label>
+    <input id="loginEmail" type="email" placeholder="nome@gmail.com" autocomplete="email">
+    <div class="acoes"><button class="btn" id="btnLogin" onclick="entrar()">Enviar link de acesso</button></div>
+    <p class="meta" id="loginMsg"></p>
+  </div>
+</section>
+
+<section id="telaSemAcesso" class="login oculto">
+  <h2>Acesso não liberado</h2>
+  <div class="card"><p>O email <b id="semAcessoEmail"></b> ainda não está na lista do grupo. Peça a um administrador para incluir você.</p>
+  <button class="btn claro" onclick="sair()">Sair</button></div>
+</section>
+
+<!-- APP -->
+<div id="app" class="oculto">
+  <nav>
+    <button data-aba="posts" class="ativo">Posts</button>
+    <button data-aba="novo">Novo post</button>
+    <button data-aba="eventos">Eventos</button>
+    <button data-aba="membros" id="abaMembros" class="oculto">Membros</button>
+  </nav>
+  <main>
+    <!-- POSTS -->
+    <section id="aba-posts">
+      <div class="filtros" id="filtros">
+        <button data-f="fila" class="ativo">Pendentes</button>
+        <button data-f="aprovado">Prontos para postar</button>
+        <button data-f="publicado">Publicados</button>
+        <button data-f="todos">Todos</button>
+      </div>
+      <div id="listaPosts"></div>
+    </section>
+
+    <!-- NOVO / EDITAR -->
+    <section id="aba-novo" class="oculto">
+      <h2 id="tituloForm">Nova ideia de post</h2>
+      <div class="card">
+        <input type="hidden" id="pId">
+        <label for="pTitulo">Assunto</label>
+        <input id="pTitulo" placeholder="Ex.: Encontro de famílias de novembro">
+        <div class="linha">
+          <div><label for="pTipo">Formato</label>
+            <select id="pTipo"><option value="foto">Foto</option><option value="carrossel">Carrossel (várias fotos)</option><option value="reel">Reel (vídeo)</option><option value="story">Story</option></select></div>
+          <div><label for="pData">Data para postar</label><input id="pData" type="date"></div>
+        </div>
+        <label for="pEvento">Ligado a um evento (opcional)</label>
+        <select id="pEvento"><option value="">Nenhum</option></select>
+        <label for="pLegenda">Legenda</label>
+        <textarea id="pLegenda" placeholder="Escreva o texto que vai no post. Sem emoji."></textarea>
+        <label for="pFotos">Fotos</label>
+        <input id="pFotos" type="file" accept="image/*" multiple>
+        <div class="fotos" id="pFotosAtuais"></div>
+        <div class="check"><input type="checkbox" id="pAutorizado">
+          <label for="pAutorizado" style="margin:0;font-weight:500;color:var(--texto)">Confirmo que todas as pessoas que aparecem nas fotos (e os responsáveis pelas crianças) autorizaram a publicação.</label></div>
+        <div class="linha" style="margin-top:4px">
+          <div><label for="pStatus">Situação</label>
+            <select id="pStatus"><option value="ideia">Ideia</option><option value="em_preparo">Em preparo</option></select></div>
+        </div>
+        <div class="acoes">
+          <button class="btn" id="btnSalvarPost" onclick="salvarPost()">Salvar</button>
+          <button class="btn claro" onclick="limparForm()">Limpar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- EVENTOS -->
+    <section id="aba-eventos" class="oculto">
+      <h2>Próximos eventos</h2>
+      <div class="card" id="listaEventos"></div>
+      <h2>Novo evento</h2>
+      <div class="card">
+        <input type="hidden" id="eId">
+        <label for="eTitulo">Evento</label><input id="eTitulo" placeholder="Ex.: Missa das famílias">
+        <div class="linha">
+          <div><label for="eData">Data e hora</label><input id="eData" type="datetime-local"></div>
+          <div><label for="eLocal">Local</label><input id="eLocal" placeholder="Ex.: Salão paroquial"></div>
+        </div>
+        <label for="eDesc">Detalhes</label><textarea id="eDesc" style="min-height:80px" placeholder="O que cada família leva, tema, horário de chegada..."></textarea>
+        <div class="acoes"><button class="btn" onclick="salvarEvento()">Salvar evento</button><button class="btn claro" onclick="limparEvento()">Limpar</button></div>
+      </div>
+    </section>
+
+    <!-- MEMBROS -->
+    <section id="aba-membros" class="oculto">
+      <h2>Quem usa o app</h2>
+      <div class="card">
+        <table><thead><tr><th>Nome</th><th>Email</th><th>Papel</th><th></th></tr></thead><tbody id="listaMembros"></tbody></table>
+      </div>
+      <div class="card">
+        <h3>Incluir pessoa</h3>
+        <div class="linha">
+          <div><label for="mNome">Nome</label><input id="mNome"></div>
+          <div><label for="mEmail">Email</label><input id="mEmail" type="email"></div>
+          <div><label for="mPapel">Papel</label><select id="mPapel"><option value="colaborador">Colaborador</option><option value="admin">Administrador</option></select></div>
+        </div>
+        <div class="acoes"><button class="btn" onclick="incluirMembro()">Incluir</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- MODAL APROVAR -->
+<div class="modal" id="modalAprovar">
+  <div class="card">
+    <h3>Aprovar post</h3>
+    <p class="meta" id="aprTitulo"></p>
+    <label for="aprSenha">Senha de aprovação</label>
+    <input id="aprSenha" type="password" autocomplete="off">
+    <div class="acoes"><button class="btn verde" onclick="confirmarAprovacao()">Aprovar</button><button class="btn claro" onclick="fecharModal()">Cancelar</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://ahcjseshaycblchfdxjo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sDJAXDp7-dqKYtVrL97goA_osQEvho2';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let eu = null, posts = [], eventos = [], filtro = 'fila', aprovandoId = null;
+const $ = id => document.getElementById(id);
+const esc = s => (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const NOME_STATUS = {ideia:'Ideia', em_preparo:'Em preparo', aprovado:'Pronto para postar', publicado:'Publicado'};
+const NOME_TIPO = {foto:'Foto', carrossel:'Carrossel', reel:'Reel', story:'Story'};
+
+function aviso(msg){ const t=$('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',3200); }
+function mostrar(id){ ['telaLogin','telaSemAcesso','app'].forEach(x=>$(x).classList.toggle('oculto', x!==id)); }
+function dataBR(d){ if(!d) return ''; const [a,m,dd]=d.slice(0,10).split('-'); return `${dd}/${m}/${a}`; }
+function dataHoraBR(d){ if(!d) return ''; const x=new Date(d); return x.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})+' às '+x.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+
+// ---------- LOGIN ----------
+async function entrar(){
+  const email = $('loginEmail').value.trim().toLowerCase();
+  if(!email){ aviso('Digite seu email.'); return; }
+  $('btnLogin').disabled = true;
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname } });
+  $('btnLogin').disabled = false;
+  $('loginMsg').textContent = error ? ('Não foi possível enviar: ' + error.message) : 'Pronto. Abra seu email e toque no link "Log In" para entrar.';
+}
+async function sair(){ await sb.auth.signOut(); eu=null; mostrar('telaLogin'); $('quem').classList.add('oculto'); }
+
+async function iniciar(session){
+  if(!session){ mostrar('telaLogin'); return; }
+  const email = session.user.email.toLowerCase();
+  const { data } = await sb.from('membros').select('*').eq('email', email).maybeSingle();
+  if(!data){ $('semAcessoEmail').textContent = email; mostrar('telaSemAcesso'); return; }
+  eu = data;
+  $('quemNome').textContent = eu.nome; $('quem').classList.remove('oculto');
+  $('abaMembros').classList.toggle('oculto', eu.papel !== 'admin');
+  mostrar('app');
+  await carregarEventos(); await carregarPosts();
+}
+sb.auth.onAuthStateChange((ev, session) => { if(ev==='SIGNED_IN' || ev==='INITIAL_SESSION') iniciar(session); });
+
+// ---------- ABAS ----------
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => abrirAba(b.dataset.aba));
+function abrirAba(a){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('ativo', b.dataset.aba===a));
+  ['posts','novo','eventos','membros'].forEach(x=>$('aba-'+x).classList.toggle('oculto', x!==a));
+  if(a==='membros') carregarMembros();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('#filtros button').forEach(b => b.onclick = () => {
+  filtro=b.dataset.f; document.querySelectorAll('#filtros button').forEach(x=>x.classList.toggle('ativo',x===b)); desenharPosts();
+});
+
+// ---------- POSTS ----------
+async function carregarPosts(){
+  const { data, error } = await sb.from('posts').select('*').order('data_prevista', {ascending:true, nullsFirst:false}).order('criado_em', {ascending:false});
+  if(error){ aviso('Erro ao carregar posts.'); return; }
+  posts = data; desenharPosts();
+}
+async function urlFoto(caminho){
+  const { data } = await sb.storage.from('fotos').createSignedUrl(caminho, 3600);
+  return data?.signedUrl || '';
+}
+async function desenharPosts(){
+  const lista = posts.filter(p => filtro==='todos' ? true : filtro==='fila' ? ['ideia','em_preparo'].includes(p.status) : p.status===filtro);
+  const box = $('listaPosts');
+  if(!lista.length){ box.innerHTML = '<div class="vazio">Nada por aqui ainda.</div>'; return; }
+  box.innerHTML = lista.map(p => {
+    const ev = eventos.find(e=>e.id===p.evento_id);
+    const temFoto = (p.fotos||[]).length>0;
+    const pend = ['ideia','em_preparo'].includes(p.status);
+    return `<div class="card">
+      <span class="selo s-${p.status}">${NOME_STATUS[p.status]}</span>
+      <h3 style="margin-top:8px">${esc(p.titulo)}</h3>
+      <div class="meta">${NOME_TIPO[p.tipo]}${p.data_prevista?' · postar em '+dataBR(p.data_prevista):''}${ev?' · '+esc(ev.titulo):''}</div>
+      <div class="meta">Enviado por ${esc(p.enviado_por||'—')}${p.aprovado_por?' · aprovado por '+esc(p.aprovado_por):''}${p.publicado_em?' · publicado em '+dataBR(p.publicado_em):''}</div>
+      ${p.legenda?`<div class="legenda">${esc(p.legenda)}</div>`:''}
+      <div class="fotos" data-fotos="${p.id}"></div>
+      ${temFoto && !p.imagens_autorizadas ? '<div class="aviso">Falta confirmar a autorização de imagem das pessoas nas fotos.</div>':''}
+      <div class="acoes">
+        ${p.legenda?`<button class="btn claro" onclick="copiarLegenda('${p.id}')">Copiar legenda</button>`:''}
+        ${pend?`<button class="btn claro" onclick="editarPost('${p.id}')">Editar</button>`:''}
+        ${pend?`<button class="btn verde" onclick="abrirAprovacao('${p.id}')">Aprovar</button>`:''}
+        ${p.status==='aprovado'?`<button class="btn" onclick="marcarPublicado('${p.id}')">Marcar como publicado</button>`:''}
+        <button class="btn claro" onclick="whatsPost('${p.id}')">Mandar no WhatsApp</button>
+      </div></div>`;
+  }).join('');
+  for(const p of lista){
+    if(!(p.fotos||[]).length) continue;
+    const el = box.querySelector(`[data-fotos="${p.id}"]`);
+    for(const c of p.fotos){
+      const u = await urlFoto(c);
+      if(u) el.insertAdjacentHTML('beforeend', `<a href="${u}" target="_blank" download><img src="${u}" alt="foto do post"></a>`);
+    }
+  }
+}
+function copiarLegenda(id){
+  const p = posts.find(x=>x.id===id);
+  navigator.clipboard.writeText(p.legenda||'').then(()=>aviso('Legenda copiada.'));
+}
+function whatsPost(id){
+  const p = posts.find(x=>x.id===id);
+  const txt = `*${p.titulo}* (${NOME_STATUS[p.status]})${p.data_prevista?'\nPostar em '+dataBR(p.data_prevista):''}\n\n${p.legenda||''}\n\nVer no app: ${location.origin+location.pathname}`;
+  window.open('https://wa.me/?text='+encodeURIComponent(txt), '_blank');
+}
+function editarPost(id){
+  const p = posts.find(x=>x.id===id);
+  $('pId').value=p.id; $('pTitulo').value=p.titulo; $('pTipo').value=p.tipo; $('pData').value=p.data_prevista||'';
+  $('pEvento').value=p.evento_id||''; $('pLegenda').value=p.legenda||''; $('pAutorizado').checked=p.imagens_autorizadas;
+  $('pStatus').value=p.status; $('pFotos').value=''; $('tituloForm').textContent='Editar post';
+  $('pFotosAtuais').innerHTML = (p.fotos||[]).length ? `<span class="meta">${p.fotos.length} foto(s) já enviada(s). Novas fotos serão somadas.</span>` : '';
+  abrirAba('novo');
+}
+function limparForm(){
+  ['pId','pTitulo','pData','pLegenda'].forEach(x=>$(x).value=''); $('pTipo').value='foto'; $('pEvento').value='';
+  $('pAutorizado').checked=false; $('pStatus').value='ideia'; $('pFotos').value=''; $('pFotosAtuais').innerHTML='';
+  $('tituloForm').textContent='Nova ideia de post';
+}
+async function salvarPost(){
+  const titulo = $('pTitulo').value.trim();
+  if(!titulo){ aviso('Escreva o assunto do post.'); return; }
+  $('btnSalvarPost').disabled = true;
+  try{
+    const id = $('pId').value;
+    const atual = id ? posts.find(x=>x.id===id) : null;
+    const fotos = [...(atual?.fotos||[])];
+    for(const f of $('pFotos').files){
+      const ext = (f.name.split('.').pop()||'jpg').toLowerCase();
+      const caminho = `${new Date().toISOString().slice(0,10)}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await sb.storage.from('fotos').upload(caminho, f, { contentType: f.type });
+      if(error) throw new Error('Falha ao enviar foto: '+error.message);
+      fotos.push(caminho);
+    }
+    const reg = { titulo, tipo:$('pTipo').value, data_prevista:$('pData').value||null, evento_id:$('pEvento').value||null,
+      legenda:$('pLegenda').value.trim()||null, imagens_autorizadas:$('pAutorizado').checked, status:$('pStatus').value, fotos };
+    const r = id ? await sb.from('posts').update(reg).eq('id', id) : await sb.from('posts').insert({ ...reg, enviado_por: eu.nome });
+    if(r.error) throw new Error(r.error.message);
+    aviso('Post salvo.'); limparForm(); await carregarPosts(); abrirAba('posts');
+  }catch(e){ aviso(e.message); }
+  $('btnSalvarPost').disabled = false;
+}
+function abrirAprovacao(id){
+  const p = posts.find(x=>x.id===id);
+  if((p.fotos||[]).length && !p.imagens_autorizadas){ aviso('Antes de aprovar, confirme a autorização de imagem (botão Editar).'); return; }
+  aprovandoId=id; $('aprTitulo').textContent=p.titulo; $('aprSenha').value=''; $('modalAprovar').style.display='flex'; $('aprSenha').focus();
+}
+function fecharModal(){ $('modalAprovar').style.display='none'; aprovandoId=null; }
+async function confirmarAprovacao(){
+  const { error } = await sb.rpc('aprovar_post', { p_id: aprovandoId, p_senha: $('aprSenha').value, p_nome: eu.nome });
+  if(error){ aviso(error.message.includes('senha') ? 'Senha incorreta.' : error.message.includes('autorizacao') ? 'Falta a autorização de imagem.' : 'Não foi possível aprovar.'); return; }
+  fecharModal(); aviso('Post aprovado.'); await carregarPosts();
+}
+async function marcarPublicado(id){
+  if(!confirm('Confirma que este post já está no Instagram?')) return;
+  const { error } = await sb.rpc('marcar_publicado', { p_id: id });
+  if(error){ aviso('Não foi possível marcar.'); return; }
+  aviso('Marcado como publicado.'); await carregarPosts();
+}
+
+// ---------- EVENTOS ----------
+async function carregarEventos(){
+  const { data } = await sb.from('eventos').select('*').order('data_hora');
+  eventos = data||[];
+  const futuros = eventos.filter(e => new Date(e.data_hora) >= new Date(Date.now()-86400000));
+  $('listaEventos').innerHTML = futuros.length ? futuros.map(e=>{
+    const d = new Date(e.data_hora);
+    return `<div class="cal-dia"><div class="cal-data"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}</span></div>
+      <div style="flex:1"><h3>${esc(e.titulo)}</h3><div class="meta">${dataHoraBR(e.data_hora)}${e.local?' · '+esc(e.local):''}</div>
+      ${e.descricao?`<div class="meta" style="white-space:pre-wrap;margin-top:6px">${esc(e.descricao)}</div>`:''}
+      <div class="acoes"><button class="btn claro" onclick="editarEvento('${e.id}')">Editar</button>
+      <button class="btn claro" onclick="whatsEvento('${e.id}')">Convidar no WhatsApp</button>
+      <button class="btn ouro" onclick="postDoEvento('${e.id}')">Criar post deste evento</button></div></div></div>`;
+  }).join('') : '<div class="vazio">Nenhum evento marcado.</div>';
+  $('pEvento').innerHTML = '<option value="">Nenhum</option>' + eventos.map(e=>`<option value="${e.id}">${esc(e.titulo)} (${dataBR(e.data_hora)})</option>`).join('');
+}
+function editarEvento(id){
+  const e = eventos.find(x=>x.id===id); const d = new Date(e.data_hora);
+  const local = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  $('eId').value=e.id; $('eTitulo').value=e.titulo; $('eData').value=local; $('eLocal').value=e.local||''; $('eDesc').value=e.descricao||'';
+  $('eTitulo').scrollIntoView({behavior:'smooth'});
+}
+function limparEvento(){ ['eId','eTitulo','eData','eLocal','eDesc'].forEach(x=>$(x).value=''); }
+async function salvarEvento(){
+  const titulo=$('eTitulo').value.trim(), dh=$('eData').value;
+  if(!titulo || !dh){ aviso('Preencha o nome e a data do evento.'); return; }
+  const reg = { titulo, data_hora:new Date(dh).toISOString(), local:$('eLocal').value.trim()||null, descricao:$('eDesc').value.trim()||null };
+  const id = $('eId').value;
+  const r = id ? await sb.from('eventos').update(reg).eq('id',id) : await sb.from('eventos').insert({ ...reg, criado_por: eu.nome });
+  if(r.error){ aviso('Erro ao salvar evento.'); return; }
+  aviso('Evento salvo.'); limparEvento(); await carregarEventos();
+}
+function whatsEvento(id){
+  const e = eventos.find(x=>x.id===id);
+  const txt = `*${e.titulo}*\n${dataHoraBR(e.data_hora)}${e.local?'\n'+e.local:''}${e.descricao?'\n\n'+e.descricao:''}\n\nPais Católicos Santa Maria`;
+  window.open('https://wa.me/?text='+encodeURIComponent(txt), '_blank');
+}
+function postDoEvento(id){
+  const e = eventos.find(x=>x.id===id);
+  limparForm(); $('pTitulo').value = e.titulo; $('pEvento').value = e.id;
+  $('pLegenda').value = `${e.titulo}\n\n${dataHoraBR(e.data_hora)}${e.local?' · '+e.local:''}\n\n${e.descricao||''}\n\nVenha caminhar com a gente.`.trim();
+  abrirAba('novo');
+}
+
+// ---------- MEMBROS ----------
+async function carregarMembros(){
+  const { data } = await sb.from('membros').select('*').order('nome');
+  $('listaMembros').innerHTML = (data||[]).map(m=>`<tr><td>${esc(m.nome)}</td><td>${esc(m.email)}</td><td>${m.papel==='admin'?'Administrador':'Colaborador'}</td>
+    <td>${m.email!==eu.email?`<button class="btn claro" onclick="removerMembro('${esc(m.email)}')">Remover</button>`:''}</td></tr>`).join('');
+}
+async function incluirMembro(){
+  const nome=$('mNome').value.trim(), email=$('mEmail').value.trim().toLowerCase();
+  if(!nome || !email){ aviso('Preencha nome e email.'); return; }
+  const { error } = await sb.from('membros').insert({ nome, email, papel:$('mPapel').value });
+  if(error){ aviso(error.code==='23505'?'Esse email já está na lista.':'Erro ao incluir.'); return; }
+  $('mNome').value=''; $('mEmail').value=''; aviso('Pessoa incluída. Ela já pode entrar com esse email.'); carregarMembros();
+}
+async function removerMembro(email){
+  if(!confirm('Remover '+email+' do app?')) return;
+  const { error } = await sb.from('membros').delete().eq('email', email);
+  if(error){ aviso('Erro ao remover.'); return; }
+  carregarMembros();
+}
+</script>
+</body>
+</html>

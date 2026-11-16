@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hoje — Pais Católicos Santa Maria</title>
+<meta name="theme-color" content="#0F1E36">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0F1E36;--ouro:#C5A059;--marfim:#F8F6F0;--texto:#26303f;--suave:#6b7280}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--marfim);color:var(--texto);font-family:Lora,Georgia,serif;line-height:1.55}
+  header{background:var(--navy);color:var(--marfim);text-align:center;padding:28px 18px 22px}
+  header .marca{font-family:Cinzel,serif;letter-spacing:.18em;font-size:.72rem;color:var(--ouro)}
+  header h1{font-family:Cinzel,serif;font-weight:500;font-size:1.55rem;margin:8px 0 2px}
+  header .data{font-family:'Cormorant Garamond',serif;font-size:1.15rem;opacity:.9}
+  main{max-width:560px;margin:0 auto;padding:18px 16px 40px}
+  .cartao{background:#fff;border:1px solid #e7e1d2;border-radius:14px;padding:18px 18px 16px;margin:14px 0}
+  .rotulo{font-family:Cinzel,serif;font-size:.72rem;letter-spacing:.16em;color:var(--ouro);margin:0 0 6px}
+  .titulo{font-family:'Cormorant Garamond',serif;font-size:1.45rem;font-weight:600;color:var(--navy);margin:0 0 4px;line-height:1.2}
+  .cor{display:inline-flex;align-items:center;gap:8px;font-size:.88rem;color:var(--suave)}
+  .bola{width:12px;height:12px;border-radius:50%;border:1px solid #0002}
+  ul.leituras{list-style:none;padding:0;margin:10px 0 0}
+  ul.leituras li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid #f0ebdf}
+  ul.leituras li span:first-child{color:var(--suave)}
+  ul.leituras li span:last-child{font-weight:500;color:var(--navy);text-align:right}
+  .frase{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.2rem;color:var(--navy);margin:2px 0 0}
+  a.botao{display:block;text-align:center;background:var(--navy);color:var(--marfim);text-decoration:none;border-radius:10px;padding:12px;margin-top:14px;font-family:Cinzel,serif;font-size:.82rem;letter-spacing:.08em}
+  a.botao.claro{background:transparent;color:var(--navy);border:1px solid var(--ouro)}
+  .obs{font-size:.88rem;color:var(--suave);margin:10px 0 0}
+  footer{text-align:center;font-size:.8rem;color:var(--suave);padding:0 16px 30px}
+  footer a{color:var(--navy)}
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">PAIS CATÓLICOS SANTA MARIA</div>
+  <h1>Hoje</h1>
+  <div class="data" id="data"></div>
+</header>
+<main id="conteudo"></main>
+<footer>
+  Página do grupo Pais Católicos Santa Maria · Capela do Colégio Santa Maria<br>
+  Leituras: indicamos as citações; o texto completo está no site de liturgia indicado.<br>
+  <a href="https://www.instagram.com/paiscatolicossantamaria/" target="_blank" rel="noopener">@paiscatolicossantamaria</a>
+</footer>
+<script>
+// Programação fixa da Capela do Colégio Santa Maria (0=domingo ... 6=sábado)
+const CAPELA = { 1:[['7h','Santa Missa']], 5:[['7h','Terço Mariano']] };
+// Adorações ao Santíssimo e formações: preencher quando a programação do mês for divulgada
+// formato: 'AAAA-MM-DD': [['hora','atividade'], ...]
+const EVENTOS_CAPELA = {};
+// Dias sem aula no Colégio Santa Maria (feriados, recessos, férias): a capela não tem encontros
+// formato: ['início','fim','motivo'] — confirmar com o calendário do colégio
+const SEM_AULA = [
+  ['2026-11-20','2026-11-20','feriado do Dia da Consciência Negra'],
+];
+function semAula(k){ const r = SEM_AULA.find(([i,f])=>k>=i && k<=f); return r ? r[2] : null; }
+const CORES = { verde:'#2f7d4a', branco:'#ffffff', vermelho:'#b3261e', roxo:'#5b2a86', rosa:'#e8a3b8' };
+const LINK_LITURGIA = 'https://liturgia.cancaonova.com/pb/';
+
+// Um registro por dia. Atualizado toda semana junto com o Santo do Dia.
+const DIAS = {
+ '2026-11-16': { celebracao:'Segunda-feira da 33ª Semana do Tempo Comum', cor:'verde',
+   leituras:[['1ª Leitura','Ap 1,1-4; 2,1-5a'],['Salmo','Sl 1'],['Evangelho','Lc 18,35-43']],
+   frase:'"Senhor, que eu veja." Peça hoje, em família, a graça de enxergar quem precisa de vocês.',
+   santo:'Santa Margarida da Escócia' },
+ '2026-11-17': { celebracao:'Santa Isabel da Hungria, memória', cor:'branco',
+   leituras:[['1ª Leitura','Ap 3,1-6.14-22'],['Salmo','Sl 14(15)'],['Evangelho','Lc 19,1-10']],
+   frase:'Zaqueu desceu depressa e recebeu Jesus com alegria. Que a nossa casa também abra a porta para Ele hoje.',
+   santo:'Santa Isabel da Hungria' },
+ '2026-11-18': { celebracao:'Quarta-feira da 33ª Semana do Tempo Comum', cor:'verde',
+   leituras:[['1ª Leitura','Ap 4,1-11'],['Salmo','Sl 150'],['Evangelho','Lc 19,11-28']],
+   frase:'Cada um recebeu um dom para fazer render. Qual dom dos seus filhos vocês podem incentivar hoje?',
+   santo:'Santo Odão de Cluny' },
+ '2026-11-19': { celebracao:'Quinta-feira da 33ª Semana do Tempo Comum', cor:'verde',
+   leituras:[['1ª Leitura','Ap 5,1-10'],['Salmo','Sl 149'],['Evangelho','Lc 19,41-44']],
+   frase:'Jesus chorou por Jerusalém, que não reconheceu o tempo da visita de Deus. Reconheçamos as visitas de Deus no nosso dia.',
+   santo:'Santa Matilde' },
+ '2026-11-20': { celebracao:'Sexta-feira da 33ª Semana do Tempo Comum', cor:'verde',
+   leituras:[['1ª Leitura','Ap 10,8-11'],['Salmo','Sl 118(119)'],['Evangelho','Lc 19,45-48']],
+   frase:'"Minha casa será casa de oração." Que tal um momento de oração juntos antes de dormir?',
+   santo:'São Gelásio I, papa' },
+ '2026-11-21': { celebracao:'Apresentação de Nossa Senhora, memória', cor:'branco',
+   leituras:[['1ª Leitura','Ap 11,4-12'],['Salmo','Sl 143(144)'],['Evangelho','Lc 20,27-40']],
+   frase:'Maria foi apresentada a Deus desde menina. Apresentemos também os nossos filhos ao Senhor, todos os dias.',
+   santo:'Apresentação de Nossa Senhora' },
+ '2026-11-22': { celebracao:'Solenidade de Nosso Senhor Jesus Cristo, Rei do Universo', cor:'branco',
+   leituras:[['1ª Leitura','Ez 34,11-12.15-17'],['Salmo','Sl 22(23)'],['2ª Leitura','1Cor 15,20-26.28'],['Evangelho','Mt 25,31-46']],
+   frase:'"Todas as vezes que fizestes isso a um destes mais pequenos, foi a mim que o fizestes." O Rei se encontra nos que precisam.',
+   santo:'Cristo Rei · Santa Cecília' },
+};
+
+function hojeRecife(){ const d=new Date(Date.now()-3*3600000); return d.toISOString().slice(0,10); }
+const chave = new URLSearchParams(location.search).get('dia') || hojeRecife();
+const [a,m,d] = chave.split('-').map(Number);
+const dt = new Date(Date.UTC(a,m-1,d,12));
+const semana = dt.getUTCDay();
+document.getElementById('data').textContent = dt.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
+const dia = DIAS[chave];
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let h = '';
+if(dia){
+  h += `<section class="cartao"><p class="rotulo">LITURGIA DO DIA</p><p class="titulo">${esc(dia.celebracao)}</p>
+    <span class="cor"><span class="bola" style="background:${CORES[dia.cor]}"></span>Cor litúrgica: ${esc(dia.cor)}</span>
+    <ul class="leituras">${dia.leituras.map(([r,c])=>`<li><span>${esc(r)}</span><span>${esc(c)}</span></li>`).join('')}</ul>
+    <a class="botao" href="${LINK_LITURGIA}" target="_blank" rel="noopener">LER AS LEITURAS COMPLETAS</a></section>`;
+  h += `<section class="cartao"><p class="rotulo">PARA A FAMÍLIA</p><p class="frase">${esc(dia.frase)}</p></section>`;
+  h += `<section class="cartao"><p class="rotulo">SANTO DO DIA</p><p class="titulo">${esc(dia.santo)}</p>
+    <a class="botao claro" href="https://www.vaticannews.va/pt/santo-do-dia.html" target="_blank" rel="noopener">HISTÓRIA COMPLETA NO VATICAN NEWS</a></section>`;
+} else {
+  h += `<section class="cartao"><p class="rotulo">LITURGIA DO DIA</p><p class="titulo">Em atualização</p>
+    <a class="botao" href="${LINK_LITURGIA}" target="_blank" rel="noopener">VER A LITURGIA DE HOJE</a></section>`;
+}
+const NOMES = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+const motivoHoje = semAula(chave);
+const capHoje = motivoHoje ? [] : [...(CAPELA[semana]||[]), ...(EVENTOS_CAPELA[chave]||[])];
+let proxima = '';
+if(!capHoje.length){
+  for(let i=1;i<=60 && !proxima;i++){
+    const nd = new Date(dt.getTime()+i*86400000), k = nd.toISOString().slice(0,10), w = nd.getUTCDay();
+    const it = semAula(k) ? [] : [...(CAPELA[w]||[]), ...(EVENTOS_CAPELA[k]||[])];
+    if(it.length) proxima = `Próximo encontro: ${i===1?'amanhã':i<7?NOMES[w]:NOMES[w]+', '+nd.toLocaleDateString('pt-BR',{day:'numeric',month:'numeric',timeZone:'UTC'})}, ${it.map(([hh,o])=>`${o} às ${hh}`).join(' e ')}.`;
+  }
+}
+h += `<section class="cartao"><p class="rotulo">NA NOSSA CAPELA</p><p class="titulo">Capela do Colégio Santa Maria</p>
+  ${capHoje.length ? `<ul class="leituras">${capHoje.map(([hh,o])=>`<li><span>${esc(o)}</span><span>${esc(hh)}</span></li>`).join('')}</ul>` : `<p class="obs">${motivoHoje ? `Hoje não há encontro na capela (${esc(motivoHoje)}).` : 'Hoje não há encontro na capela.'} ${esc(proxima)}</p>`}
+  <p class="obs">Nos dias letivos do colégio: toda segunda-feira, Santa Missa às 7h; toda sexta-feira, Terço Mariano às 7h. Adorações ao Santíssimo e formações são divulgadas antes do início de cada mês.</p></section>`;
+document.getElementById('conteudo').innerHTML = h;
+</script>
+</body>
+</html>

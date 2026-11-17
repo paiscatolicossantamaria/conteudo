@@ -134,12 +134,12 @@
         <select id="pEvento"><option value="">Nenhum</option></select>
         <label for="pLegenda">Legenda</label>
         <textarea id="pLegenda" placeholder="Escreva o texto que vai no post. Sem emoji."></textarea>
-        <label for="pFotos">Fotos</label>
-        <input id="pFotos" type="file" accept="image/*" multiple>
+        <label for="pFotos">Fotos ou vídeo</label>
+        <input id="pFotos" type="file" accept="image/*,video/mp4" multiple>
         <div class="fotos" id="pFotosAtuais"></div>
         <div class="check"><input type="checkbox" id="pAutorizado">
           <label for="pAutorizado" style="margin:0;font-weight:500;color:var(--texto)">Confirmo que todas as pessoas que aparecem nas fotos (e os responsáveis pelas crianças) autorizaram a publicação.</label></div>
-        <p class="meta">Ao aprovar, foto, carrossel e story vão direto para o Instagram. Story usa só uma foto e não mostra a legenda. Reel fica para postar pelo celular.</p>
+        <p class="meta">Ao aprovar, tudo vai direto para o Instagram. Story: até 3 telas, sem legenda. Reel: envie um vídeo MP4 em pé (até 50 MB e 90 segundos). O santo do dia sai em story e em Reel.</p>
         <div class="linha" style="margin-top:4px">
           <div><label for="pStatus">Situação</label>
             <select id="pStatus"><option value="ideia">Ideia</option><option value="em_preparo">Em preparo</option></select></div>
@@ -275,27 +275,32 @@ async function desenharPosts(){
     return `<div class="card">
       <span class="selo s-${p.status}">${NOME_STATUS[p.status]}</span>
       <h3 style="margin-top:8px">${esc(p.titulo)}</h3>
-      <div class="meta">${NOME_TIPO[p.tipo]}${p.data_prevista?' · postar em '+dataBR(p.data_prevista):''}${ev?' · '+esc(ev.titulo):''}</div>
+      <div class="meta">${NOME_TIPO[p.tipo]}${p.video && p.tipo!=='reel'?' + Reel':''}${p.data_prevista?' · postar em '+dataBR(p.data_prevista):''}${ev?' · '+esc(ev.titulo):''}</div>
       <div class="meta">Enviado por ${esc(p.enviado_por||'—')}${p.aprovado_por?' · aprovado por '+esc(p.aprovado_por):''}${p.publicado_em?' · publicado em '+dataBR(p.publicado_em):''}</div>
       ${p.legenda?`<div class="legenda">${esc(p.legenda)}</div>`:''}
       <div class="fotos" data-fotos="${p.id}"></div>
+      ${p.reel_media_id && p.reel_media_id.startsWith('c:') ? '<div class="meta"><b>Reel: o Instagram está processando o vídeo (sai em alguns minutos).</b></div>':''}
+      ${p.reel_media_id && p.reel_media_id.startsWith('erro') ? `<div class="aviso">O Reel não saiu: ${esc(p.reel_media_id.slice(6))}</div>`:''}
+      ${p.video && p.reel_media_id && !p.reel_media_id.startsWith('c:') && !p.reel_media_id.startsWith('erro') ? '<div class="meta">Reel publicado.</div>':''}
+      ${p.reel_canto ? `<div class="meta">Canto do Reel: ${esc(p.reel_canto)}</div>`:''}
       ${temFoto && !p.imagens_autorizadas ? '<div class="aviso">Falta confirmar a autorização de imagem das pessoas nas fotos.</div>':''}
       ${p.ig_status==='publicando' ? '<div class="meta"><b>Publicando no Instagram...</b></div>':''}
       ${p.ig_status==='erro' ? `<div class="aviso">O Instagram não aceitou: ${esc(p.ig_erro)}${(p.ig_tentativas||0)<3?' (o sistema tenta de novo sozinho em alguns minutos)':''}</div>`:''}
-      ${p.status==='aprovado' && !p.ig_status && p.tipo!=='reel' ? '<div class="meta">Na fila para o Instagram (sai em até 5 minutos).</div>':''}
+      ${p.status==='aprovado' && !p.ig_status ? '<div class="meta">Na fila para o Instagram (sai em até 5 minutos).</div>':''}
       <div class="acoes">
         ${p.legenda?`<button class="btn claro" onclick="copiarLegenda('${p.id}')">Copiar legenda</button>`:''}
         ${pend?`<button class="btn claro" onclick="editarPost('${p.id}')">Editar</button>`:''}
         ${pend?`<button class="btn verde" onclick="abrirAprovacao('${p.id}')">Aprovar</button>`:''}
-        ${p.status==='aprovado' && (!p.ig_status || p.ig_status==='erro') && ['foto','carrossel','story'].includes(p.tipo)?`<button class="btn verde" onclick="publicarNoInstagram('${p.id}')">Publicar no Instagram</button>`:''}
+        ${p.status==='aprovado' && (!p.ig_status || p.ig_status==='erro') && ['foto','carrossel','story','reel'].includes(p.tipo)?`<button class="btn verde" onclick="publicarNoInstagram('${p.id}')">Publicar no Instagram</button>`:''}
         ${p.status==='aprovado' && p.ig_status!=='publicando'?`<button class="btn claro" onclick="marcarPublicado('${p.id}')">Já postei pelo celular</button>`:''}
         <button class="btn claro" onclick="whatsPost('${p.id}')">Mandar no WhatsApp</button>
       </div></div>`;
   }).join('');
   const vez = ++desenhoVez; // se a lista for redesenhada no meio, este desenho para (evita miniatura repetida)
   for(const p of lista){
-    if(!(p.fotos||[]).length) continue;
     const el = box.querySelector(`[data-fotos="${p.id}"]`);
+    if(p.video && el){ const uv = await urlFoto(p.video); if(vez !== desenhoVez) return; if(uv) el.insertAdjacentHTML('beforeend', `<video src="${uv}" controls preload="metadata" playsinline style="max-height:240px;border-radius:8px"></video>`); }
+    if(!(p.fotos||[]).length) continue;
     for(const c of p.fotos){
       const u = await urlFoto(c);
       if(vez !== desenhoVez) return;
@@ -333,7 +338,16 @@ async function salvarPost(){
     const id = $('pId').value;
     const atual = id ? posts.find(x=>x.id===id) : null;
     const fotos = [...(atual?.fotos||[])];
+    let video = atual?.video || null;
     for(const f of $('pFotos').files){
+      if(f.type.startsWith('video/')){
+        if(f.type!=='video/mp4') throw new Error('O vídeo precisa ser MP4.');
+        if(f.size>50*1024*1024) throw new Error('O vídeo passa de 50 MB.');
+        const cv = `reels/${crypto.randomUUID()}.mp4`;
+        const { error } = await sb.storage.from('fotos').upload(cv, f, { contentType: 'video/mp4' });
+        if(error) throw new Error('Falha ao enviar o vídeo: '+error.message);
+        video = cv; continue;
+      }
       let blob;
       try { blob = await prepararFoto(f); } catch(_) { throw new Error('Não consegui abrir a foto ' + f.name + '. Use JPG ou PNG.'); }
       const caminho = `${new Date().toISOString().slice(0,10)}/${crypto.randomUUID()}.jpg`;
@@ -342,7 +356,8 @@ async function salvarPost(){
       fotos.push(caminho);
     }
     const reg = { titulo, tipo:$('pTipo').value, data_prevista:$('pData').value||null, evento_id:$('pEvento').value||null,
-      legenda:$('pLegenda').value.trim()||null, imagens_autorizadas:$('pAutorizado').checked, status:$('pStatus').value, fotos };
+      legenda:$('pLegenda').value.trim()||null, imagens_autorizadas:$('pAutorizado').checked, status:$('pStatus').value, fotos, video };
+    if(reg.tipo==='reel' && !video) throw new Error('Para Reel, envie um vídeo MP4.');
     const r = id ? await sb.from('posts').update(reg).eq('id', id) : await sb.from('posts').insert({ ...reg, enviado_por: eu.nome });
     if(r.error) throw new Error(r.error.message);
     aviso('Post salvo.'); limparForm(); await carregarPosts(); abrirAba('posts');

@@ -303,11 +303,13 @@ async function desenharPosts(){
       ${temFoto && !p.imagens_autorizadas ? '<div class="aviso">Falta confirmar a autorização de imagem das pessoas nas fotos.</div>':''}
       ${p.ig_status==='publicando' ? '<div class="meta"><b>Publicando no Instagram...</b></div>':''}
       ${p.ig_status==='erro' ? `<div class="aviso">O Instagram não aceitou: ${esc(p.ig_erro)}${(p.ig_tentativas||0)<3?' (o sistema tenta de novo sozinho em alguns minutos)':''}</div>`:''}
-      ${p.status==='aprovado' && !p.ig_status ? '<div class="meta">Na fila para o Instagram (sai em até 5 minutos).</div>':''}
+      ${p.status==='em_preparo' && p.liberacao_automatica ? `<div class="meta"><b>Liberação automática:</b> sai sozinho${p.data_prevista?' em '+dataBR(p.data_prevista)+' às '+(p.hora_prevista??6)+'h':''}. Se não quiser, toque em "Não publicar".</div>`:''}
+      ${p.status==='aprovado' && !p.ig_status ? `<div class="meta">${p.data_prevista?'Agendado: sai em '+dataBR(p.data_prevista)+' às '+(p.hora_prevista??6)+'h.':'Na fila para o Instagram (sai em até 5 minutos).'}</div>`:''}
       <div class="acoes">
         ${p.legenda?`<button class="btn claro" onclick="copiarLegenda('${p.id}')">Copiar legenda</button>`:''}
         ${pend?`<button class="btn claro" onclick="editarPost('${p.id}')">Editar</button>`:''}
         ${pend?`<button class="btn verde" onclick="abrirAprovacao('${p.id}')">Aprovar</button>`:''}
+        ${p.status==='em_preparo' && p.liberacao_automatica?`<button class="btn claro" onclick="naoPublicar('${p.id}')">Não publicar</button>`:''}
         ${p.status==='aprovado' && (!p.ig_status || p.ig_status==='erro') && ['foto','carrossel','story','reel'].includes(p.tipo)?`<button class="btn verde" onclick="publicarNoInstagram('${p.id}')">Publicar no Instagram</button>`:''}
         ${p.status==='aprovado' && p.ig_status!=='publicando'?`<button class="btn claro" onclick="marcarPublicado('${p.id}')">Já postei pelo celular</button>`:''}
         <button class="btn claro" onclick="whatsPost('${p.id}')">Mandar no WhatsApp</button>
@@ -406,6 +408,11 @@ async function confirmarAprovacao(){
   const id = aprovandoId; lembrarSenha($('aprSenha').value);
   fecharModal(); aviso('Aprovado.'); await carregarPosts();
   await publicarNoInstagram(id);
+}
+async function naoPublicar(id){
+  const { error } = await sb.from('posts').update({ liberacao_automatica: false }).eq('id', id);
+  aviso(error ? 'Não consegui cancelar: ' + error.message : 'Cancelado. O post fica parado até alguém aprovar.');
+  await carregarPosts();
 }
 async function publicarNoInstagram(id){
   const { data, error } = await sb.functions.invoke('publicar', { body: { id } });

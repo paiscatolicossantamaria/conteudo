@@ -129,6 +129,7 @@
           <div><label for="pTipo">Formato</label>
             <select id="pTipo"><option value="foto">Foto</option><option value="carrossel">Carrossel (várias fotos)</option><option value="reel">Reel (vídeo)</option><option value="story">Story</option></select></div>
           <div><label for="pData">Data para postar</label><input id="pData" type="date"></div>
+          <div><label for="pHora">Horário</label><select id="pHora"><option value="5">5h</option><option value="6">6h</option><option value="7">7h</option><option value="8">8h</option><option value="9">9h</option><option value="10">10h</option><option value="11">11h</option><option value="12">12h</option><option value="13">13h</option><option value="14">14h</option><option value="15">15h</option><option value="16">16h</option><option value="17">17h</option><option value="18">18h</option><option value="19">19h</option><option value="20">20h</option><option value="21">21h</option><option value="22">22h</option></select></div>
         </div>
         <label for="pEvento">Ligado a um evento (opcional)</label>
         <select id="pEvento"><option value="">Nenhum</option></select>
@@ -275,7 +276,7 @@ async function desenharPosts(){
     return `<div class="card">
       <span class="selo s-${p.status}">${NOME_STATUS[p.status]}</span>
       <h3 style="margin-top:8px">${esc(p.titulo)}</h3>
-      <div class="meta">${NOME_TIPO[p.tipo]}${p.video && p.tipo!=='reel'?' + Reel':''}${p.data_prevista?' · postar em '+dataBR(p.data_prevista):''}${ev?' · '+esc(ev.titulo):''}</div>
+      <div class="meta">${NOME_TIPO[p.tipo]}${p.video && p.tipo!=='reel'?' + Reel':''}${p.data_prevista?' · postar em '+dataBR(p.data_prevista)+' às '+(p.hora_prevista??6)+'h':''}${ev?' · '+esc(ev.titulo):''}</div>
       <div class="meta">Enviado por ${esc(p.enviado_por||'—')}${p.aprovado_por?' · aprovado por '+esc(p.aprovado_por):''}${p.publicado_em?' · publicado em '+dataBR(p.publicado_em):''}</div>
       ${p.legenda?`<div class="legenda">${esc(p.legenda)}</div>`:''}
       <div class="fotos" data-fotos="${p.id}"></div>
@@ -319,14 +320,14 @@ function whatsPost(id){
 }
 function editarPost(id){
   const p = posts.find(x=>x.id===id);
-  $('pId').value=p.id; $('pTitulo').value=p.titulo; $('pTipo').value=p.tipo; $('pData').value=p.data_prevista||'';
+  $('pId').value=p.id; $('pTitulo').value=p.titulo; $('pTipo').value=p.tipo; $('pData').value=p.data_prevista||''; $('pHora').value=String(p.hora_prevista??6);
   $('pEvento').value=p.evento_id||''; $('pLegenda').value=p.legenda||''; $('pAutorizado').checked=p.imagens_autorizadas;
   $('pStatus').value=p.status; $('pFotos').value=''; $('tituloForm').textContent='Editar post';
   $('pFotosAtuais').innerHTML = (p.fotos||[]).length ? `<span class="meta">${p.fotos.length} foto(s) já enviada(s). Novas fotos serão somadas.</span>` : '';
   abrirAba('novo');
 }
 function limparForm(){
-  ['pId','pTitulo','pData','pLegenda'].forEach(x=>$(x).value=''); $('pTipo').value='foto'; $('pEvento').value='';
+  ['pId','pTitulo','pData','pLegenda'].forEach(x=>$(x).value=''); $('pTipo').value='foto'; $('pHora').value='6'; $('pEvento').value='';
   $('pAutorizado').checked=false; $('pStatus').value='ideia'; $('pFotos').value=''; $('pFotosAtuais').innerHTML='';
   $('tituloForm').textContent='Nova ideia de post';
 }
@@ -355,7 +356,7 @@ async function salvarPost(){
       if(error) throw new Error('Falha ao enviar foto: '+error.message);
       fotos.push(caminho);
     }
-    const reg = { titulo, tipo:$('pTipo').value, data_prevista:$('pData').value||null, evento_id:$('pEvento').value||null,
+    const reg = { titulo, tipo:$('pTipo').value, data_prevista:$('pData').value||null, hora_prevista:Number($('pHora').value), evento_id:$('pEvento').value||null,
       legenda:$('pLegenda').value.trim()||null, imagens_autorizadas:$('pAutorizado').checked, status:$('pStatus').value, fotos, video };
     if(reg.tipo==='reel' && !video) throw new Error('Para Reel, envie um vídeo MP4.');
     const r = id ? await sb.from('posts').update(reg).eq('id', id) : await sb.from('posts').insert({ ...reg, enviado_por: eu.nome });
@@ -384,12 +385,13 @@ async function confirmarAprovacao(){
   const { error } = await sb.rpc('aprovar_post', { p_id: aprovandoId, p_senha: $('aprSenha').value, p_nome: eu.nome });
   if(error){ if(error.message.includes('senha')) esquecerSenha(); aviso(error.message.includes('senha') ? 'Senha incorreta.' : error.message.includes('autorizacao') ? 'Falta a autorização de imagem.' : 'Não foi possível aprovar.'); return; }
   const id = aprovandoId; lembrarSenha($('aprSenha').value);
-  fecharModal(); aviso('Aprovado. Publicando no Instagram...'); await carregarPosts();
+  fecharModal(); aviso('Aprovado.'); await carregarPosts();
   await publicarNoInstagram(id);
 }
 async function publicarNoInstagram(id){
   const { data, error } = await sb.functions.invoke('publicar', { body: { id } });
-  if(error || !data?.ok) aviso('Não publicou: ' + (data?.erro || data?.motivo || 'erro de conexão'));
+  if(data?.agendado) aviso('Aprovado. Vai ser publicado sozinho, ' + data.motivo + '.');
+  else if(error || !data?.ok) aviso('Não publicou: ' + (data?.erro || data?.motivo || 'erro de conexão'));
   else aviso('Publicado no Instagram.');
   await carregarPosts();
 }

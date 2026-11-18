@@ -260,9 +260,25 @@ async function carregarPosts(){
   if(error){ aviso('Erro ao carregar posts.'); return; }
   posts = data; desenharPosts();
 }
+// endereço assinado guardado por 1 dia: assim o navegador reaproveita a foto já baixada (economiza tráfego)
 async function urlFoto(caminho){
-  const { data } = await sb.storage.from('fotos').createSignedUrl(caminho, 3600);
-  return data?.signedUrl || '';
+  let cache = {}; try { cache = JSON.parse(localStorage.getItem('urlsFotos') || '{}'); } catch(_) {}
+  const agora = Date.now(), c = cache[caminho];
+  if(c && c.exp - agora > 3600000) return c.u;
+  const { data } = await sb.storage.from('fotos').createSignedUrl(caminho, 86400);
+  if(!data?.signedUrl) return '';
+  cache[caminho] = { u: data.signedUrl, exp: agora + 86400000 };
+  for(const k in cache) if(cache[k].exp < agora) delete cache[k];
+  try { localStorage.setItem('urlsFotos', JSON.stringify(cache)); } catch(_) {}
+  return data.signedUrl;
+}
+// vídeo só é baixado quando a pessoa toca em "Ver vídeo" (vídeos pesam muito no plano gratuito)
+function botaoVideo(el, caminho, rotulo){
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'btn claro'; b.textContent = rotulo;
+  b.style.cssText = 'margin:4px 6px 4px 0';
+  b.onclick = async () => { b.disabled = true; const u = await urlFoto(caminho);
+    if(u) b.outerHTML = `<video src="${u}" controls autoplay playsinline style="max-height:240px;border-radius:8px"></video>`; };
+  el.appendChild(b);
 }
 let desenhoVez = 0;
 async function desenharPosts(){
@@ -300,9 +316,12 @@ async function desenharPosts(){
   const vez = ++desenhoVez; // se a lista for redesenhada no meio, este desenho para (evita miniatura repetida)
   for(const p of lista){
     const el = box.querySelector(`[data-fotos="${p.id}"]`);
-    if(p.video && el){ const uv = await urlFoto(p.video); if(vez !== desenhoVez) return; if(uv) el.insertAdjacentHTML('beforeend', `<video src="${uv}" controls preload="metadata" playsinline style="max-height:240px;border-radius:8px"></video>`); }
+    if(p.video && el) botaoVideo(el, p.video, 'Ver vídeo do Reel');
     if(!(p.fotos||[]).length) continue;
+    let nTela = 0;
     for(const c of p.fotos){
+      nTela++;
+      if(c.endsWith('.mp4')){ if(el) botaoVideo(el, c, 'Ver tela ' + nTela + ' (vídeo)'); continue; }
       const u = await urlFoto(c);
       if(vez !== desenhoVez) return;
       if(u && el) el.insertAdjacentHTML('beforeend', `<a href="${u}" target="_blank" download><img src="${u}" alt="foto do post"></a>`);
